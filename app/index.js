@@ -51,8 +51,11 @@ export default function LoginScreen() {
       if (data.regStatus === 'rejected') {
         setError('Your registration was rejected. Contact admin.'); setBusy(false); return;
       }
+      if (data.regStatus !== 'approved') {
+        setError(`Account setup incomplete. Contact admin. ${data.regStatus} + ${data.email} + ${data.role}` ); setBusy(false); return;
+      }
     } catch (e) {
-      setError('Invalid credentials. Try again.');
+      setError(`Invalid credentials. Try again. [${e.code}] ${e.message}`);
     }
     setBusy(false);
   }

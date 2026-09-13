@@ -9,6 +9,7 @@ import TabBarIcon from '../../src/components/TabBarIcon';
 const TITLES = {
   index:   'Dept Head Dashboard',
   records: 'Student Records',
+  notices: 'Notices',
 };
 
 export default function DeptHeadLayout() {
@@ -44,6 +45,7 @@ export default function DeptHeadLayout() {
     >
       <Tabs.Screen name="index"   options={{ tabBarLabel: 'Dashboard', tabBarIcon: (p) => <TabBarIcon name="grid" {...p} /> }} />
       <Tabs.Screen name="records" options={{ tabBarLabel: 'Records',   tabBarIcon: (p) => <TabBarIcon name="list" {...p} /> }} />
+      <Tabs.Screen name="notices" options={{ tabBarLabel: 'Notices',   tabBarIcon: (p) => <TabBarIcon name="megaphone" {...p} /> }} />
     </Tabs>
   );
 }

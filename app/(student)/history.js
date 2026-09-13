@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -32,6 +32,15 @@ export default function StudentHistory() {
     return unsub;
   }, [profile]);
 
+  // Separate timeout and regular requests
+  const timeoutRequests = useMemo(() => {
+    return requests.filter(r => r.status === 'timeout');
+  }, [requests]);
+
+  const regularRequests = useMemo(() => {
+    return requests.filter(r => r.status !== 'timeout');
+  }, [requests]);
+
   return (
     <ScrollView
       style={s.screen} contentContainerStyle={s.content}
@@ -49,42 +58,101 @@ export default function StudentHistory() {
         </View>
       )}
 
-      {requests.map((r) => (
-        <View key={r.id} style={s.card}>
-          <View style={s.cardHeader}>
-            <View>
-              <Text style={s.cardDate}>{fmtDate(r.date)}</Text>
+      {/* ===================================================
+          REGULAR REQUESTS SECTION
+          =================================================== */}
+      {regularRequests.length > 0 && (
+        <View>
+          <Text style={[s.heading, { marginTop: 16, marginBottom: 10, fontSize: 15, color: COLORS.text1 }]}>
+            📋 My Requests
+          </Text>
+          {regularRequests.map((r) => (
+            <View key={r.id} style={s.card}>
+              <View style={s.cardHeader}>
+                <View>
+                  <Text style={s.cardDate}>{fmtDate(r.date)}</Text>
+                </View>
+                <StatusBadge status={r.status} />
+              </View>
+              <Text style={s.cause} numberOfLines={2}>{r.cause}</Text>
+              <View style={s.meta}>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Departure</Text>
+                  <Text style={s.metaValue}>{r.outTime}</Text>
+                </View>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Return By</Text>
+                  <Text style={s.metaValue}>{r.expectedReturn}</Text>
+                </View>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Actual Return</Text>
+                  <Text style={s.metaValue}>{r.actualReturn || '—'}</Text>
+                </View>
+              </View>
+              {r.remarks ? (
+                <View style={s.remarksBox}>
+                  <Text style={s.remarksLabel}>Remarks: </Text>
+                  <Text style={s.remarksText}>{r.remarks}</Text>
+                </View>
+              ) : null}
+              {r.arrivalSent && (
+                <View style={s.arrivalTag}>
+                  <Text style={s.arrivalText}>✓ Arrival sent at {r.arrivalTime}</Text>
+                </View>
+              )}
             </View>
-            <StatusBadge status={r.status} />
-          </View>
-          <Text style={s.cause} numberOfLines={2}>{r.cause}</Text>
-          <View style={s.meta}>
-            <View style={s.metaItem}>
-              <Text style={s.metaLabel}>Departure</Text>
-              <Text style={s.metaValue}>{r.outTime}</Text>
-            </View>
-            <View style={s.metaItem}>
-              <Text style={s.metaLabel}>Return By</Text>
-              <Text style={s.metaValue}>{r.expectedReturn}</Text>
-            </View>
-            <View style={s.metaItem}>
-              <Text style={s.metaLabel}>Actual Return</Text>
-              <Text style={s.metaValue}>{r.actualReturn || '—'}</Text>
-            </View>
-          </View>
-          {r.remarks ? (
-            <View style={s.remarksBox}>
-              <Text style={s.remarksLabel}>Remarks: </Text>
-              <Text style={s.remarksText}>{r.remarks}</Text>
-            </View>
-          ) : null}
-          {r.arrivalSent && (
-            <View style={s.arrivalTag}>
-              <Text style={s.arrivalText}>✓ Arrival sent at {r.arrivalTime}</Text>
-            </View>
-          )}
+          ))}
         </View>
-      ))}
+      )}
+
+      {/* ===================================================
+          TIMEOUT / TIME OVER REQUESTS SECTION
+          =================================================== */}
+      {timeoutRequests.length > 0 && (
+        <View style={{ marginTop: 20, borderTopWidth: 2, borderTopColor: '#ff6b6b', paddingTop: 16 }}>
+          <Text style={[s.heading, { marginBottom: 8, fontSize: 15, color: '#ff6b6b' }]}>
+            ⏱ Time Over (Expired)
+          </Text>
+          <Text style={[s.sub, { marginBottom: 12, color: '#ff6b6b', fontSize: 12 }]}>
+            {timeoutRequests.length} request(s) expired without approval/rejection
+          </Text>
+          {timeoutRequests.map((r) => (
+            <View key={r.id} style={[s.card, { borderLeftWidth: 4, borderLeftColor: '#ff6b6b', backgroundColor: '#fff9f9' }]}>
+              <View style={s.cardHeader}>
+                <View>
+                  <Text style={s.cardDate}>{fmtDate(r.date)}</Text>
+                </View>
+                <StatusBadge status={r.status} />
+              </View>
+              <Text style={s.cause} numberOfLines={2}>{r.cause}</Text>
+              <View style={s.meta}>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Departure</Text>
+                  <Text style={s.metaValue}>{r.outTime}</Text>
+                </View>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Expected By</Text>
+                  <Text style={[s.metaValue, { color: '#ff6b6b', fontWeight: 'bold' }]}>{r.expectedReturn}</Text>
+                </View>
+                <View style={s.metaItem}>
+                  <Text style={s.metaLabel}>Actual Return</Text>
+                  <Text style={s.metaValue}>{r.actualReturn || '—'}</Text>
+                </View>
+              </View>
+              <View style={[s.remarksBox, { backgroundColor: '#ffe5e5', borderLeftColor: '#ff6b6b' }]}>
+                <Text style={[s.remarksLabel, { color: '#ff6b6b' }]}>⚠️ Timeout: </Text>
+                <Text style={[s.remarksText, { color: '#cc0000' }]}>GSO2 did not approve/reject by {r.expectedReturn} hrs. This request has expired.</Text>
+              </View>
+              {r.remarks && (
+                <View style={s.remarksBox}>
+                  <Text style={s.remarksLabel}>Original Remarks: </Text>
+                  <Text style={s.remarksText}>{r.remarks}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }

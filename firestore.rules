@@ -27,7 +27,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && isStudent();
       // GSO-2 and depthead can update (approve/reject/mark return)
       allow update: if isSignedIn() && (isAdmin() || isGSO2() || isStudent());
-      allow delete: if isAdmin();
+      // Students can cancel their own request while it's still pending
+      allow delete: if isAdmin() || (isStudent() && resource.data.studentId == request.auth.uid && resource.data.status == 'pending');
     }
 
     match /notifications/{notifId} {
@@ -37,11 +38,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Notices: GSO-2 publishes, every signed-in user (students included) can read.
+    // Notices: GSO-2 and dept heads publish, every signed-in user (students included) can read.
     match /notices/{noticeId} {
       allow read:   if isSignedIn();
-      allow create: if isGSO2() || isAdmin();
-      allow update, delete: if isGSO2() || isAdmin();
+      allow create: if isGSO2() || isDeptHead() || isAdmin();
+      allow update, delete: if isGSO2() || isDeptHead() || isAdmin();
     }
 
     // Public lookup: service number → email only. Used for login before auth.
