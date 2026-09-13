@@ -1061,8 +1061,6 @@ export default function GSO2Records() {
     return filtered.filter(r => r.status !== 'timeout');
   }, [filtered]);
 
-  }, [all, filters]);
-
 
   // ==========================================================
   // GENERATE PDF

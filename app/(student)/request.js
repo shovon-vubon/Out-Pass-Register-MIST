@@ -210,10 +210,47 @@ export default function StudentRequest() {
     return h > 22 || (h === 22 && m > 0);
   };
 
+  // Helper function to get current time in HH:MM format
+  const getCurrentTime = () => {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  // Helper function to check if departure time is valid (not before current time when today)
+  const isDepartureTimeValid = () => {
+    const today = todayStr();
+    if (date === today) {
+      const currentTime = getCurrentTime();
+      return timeToMinutes(outTime) >= timeToMinutes(currentTime);
+    }
+    return true; // Future dates are always valid
+  };
+
+  // Helper function to check if return time is after departure time
+  const isReturnTimeValid = () => {
+    return timeToMinutes(returnTime) > timeToMinutes(outTime);
+  };
+
   function openConfirm() {
     if (!date || !outTime || !returnTime || !cause.trim()) {
-      setError('All fields are required.'); return;
+      setError('All fields are required.'); 
+      return;
     }
+
+    // Validate departure time is not before current time (when date is today)
+    if (!isDepartureTimeValid()) {
+      setError(`Departure time cannot be before current time (${getCurrentTime()} hrs).`);
+      return;
+    }
+
+    // Validate return time is after departure time
+    if (!isReturnTimeValid()) {
+      setError('Return time must be after departure time.');
+      return;
+    }
+
     setError(''); 
     
     // Check for existing requests and time extension
@@ -361,11 +398,22 @@ export default function StudentRequest() {
           />
 
           <Text style={s.label}>Departure Time (HH:MM) *</Text>
+          {date === todayStr() && (
+            <Text style={[s.hint, { color: COLORS.text3, marginBottom: 8 }]}>
+              Current time: {getCurrentTime()} hrs
+            </Text>
+          )}
           <TouchableOpacity style={s.pickerTrigger} onPress={() => setShowOutPicker(true)}>
             <Text style={[s.pickerTriggerText, !outTime && { color: COLORS.text3 }]}>
               {outTime ? `${outTime} hrs` : 'Select Departure Time'}
             </Text>
           </TouchableOpacity>
+
+          {outTime && date === todayStr() && timeToMinutes(outTime) < timeToMinutes(getCurrentTime()) && (
+            <View style={s.errorBox}>
+              <Text style={s.errorBoxText}>⚠ Departure time must be at or after current time ({getCurrentTime()} hrs)</Text>
+            </View>
+          )}
 
           <TimeModal
             visible={showOutPicker}
@@ -376,11 +424,22 @@ export default function StudentRequest() {
           />
 
           <Text style={s.label}>Expected Return Time (HH:MM) *</Text>
+          {outTime && (
+            <Text style={[s.hint, { color: COLORS.text3, marginBottom: 8 }]}>
+              Must be after departure time: {outTime} hrs
+            </Text>
+          )}
           <TouchableOpacity style={s.pickerTrigger} onPress={() => setShowReturnPicker(true)}>
             <Text style={[s.pickerTriggerText, !returnTime && { color: COLORS.text3 }]}>
               {returnTime ? `${returnTime} hrs` : 'Select Return Time'}
             </Text>
           </TouchableOpacity>
+
+          {returnTime && outTime && timeToMinutes(returnTime) <= timeToMinutes(outTime) && (
+            <View style={s.errorBox}>
+              <Text style={s.errorBoxText}>⚠ Return time must be after departure time ({outTime} hrs)</Text>
+            </View>
+          )}
 
           <TimeModal
             visible={showReturnPicker}
@@ -556,6 +615,9 @@ const s = StyleSheet.create({
   tipText:     { color: COLORS.text2, fontSize: 11, lineHeight: 16 },
   warnBox:     { backgroundColor: COLORS.amberBg, borderRadius: 6, padding: 8, marginBottom: 10, borderWidth: 1, borderColor: COLORS.amber },
   warnText:    { color: COLORS.amber, fontSize: 12 },
+  hint:        { color: COLORS.text3, fontSize: 11, fontStyle: 'italic', marginBottom: 6 },
+  errorBox:    { backgroundColor: '#ffebee', borderRadius: 6, padding: 10, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: COLORS.red, borderWidth: 1, borderColor: '#ffcccc' },
+  errorBoxText: { color: '#c62828', fontSize: 12, fontWeight: '500' },
   error:       { color: COLORS.red, fontSize: 12, marginBottom: 10 },
   btnRow:      { flexDirection: 'row', gap: 10, marginTop: 4 },
   btnGold:     { flex: 1, backgroundColor: COLORS.gold, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
