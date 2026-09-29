@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, RefreshControl, Modal, TextInput,
 } from 'react-native';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDocs, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, where, onSnapshot, doc, updateDoc, getDocs, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { getAuth, deleteUser } from 'firebase/auth';
 import { db, auth } from '../../firebase';
 import { useAuth } from '../../src/context/AuthContext';
@@ -27,8 +27,13 @@ export default function AdminDashboard() {
     const deleteUserAccount = httpsCallable(functions, "deleteUserAccount");
 
   useEffect(() => {
-    const unsub1 = onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsub1 = onSnapshot(collection(db, 'users'), (snap) => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort client-side (not via Firestore orderBy) so accounts created
+      // outside the app's own registration flow — which may be missing
+      // createdAt — still show up instead of being silently excluded.
+      docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+      setUsers(docs);
       setLoading(false); setRefresh(false);
     }, (err) => {
       console.warn('Firestore error:', err.message);
@@ -87,20 +92,20 @@ export default function AdminDashboard() {
               {groupedStudents[batch].map(student => (
                 <View key={student.id} style={s.userCard}>
                   <View style={s.userInfo}>
-                    <Text style={s.userName}>{student.name}</Text>  
+                    <Text style={s.userName}>{student.name}</Text>
                     <Text style={s.userMeta}>{student.serviceNumber} · {student.rank}</Text>
                     <Text style={s.userEmail}>{student.email}</Text>
                     </View>
-                    <View style={[s.regStatusBadge, { borderColor: student.regStatus === 'approved' ? COLORS.green : COLORS.red, backgroundColor: student.regStatus === 'approved' ? COLORS.greenBg : COLORS.redBg }]}>
-                      <Text style={{ color: student.regStatus === 'approved' ? COLORS.green : COLORS.red, fontSize: 10, fontWeight: '700' }}>{student.regStatus}</Text>
-                    </View>
-                    <View style={s.deleteDoc}>
-                      <TouchableOpacity onPress={() => {
+                    <View style={s.userActions}>
+                      <View style={[s.regStatusBadge, { borderColor: student.regStatus === 'approved' ? COLORS.green : COLORS.red, backgroundColor: student.regStatus === 'approved' ? COLORS.greenBg : COLORS.redBg }]}>
+                        <Text style={{ color: student.regStatus === 'approved' ? COLORS.green : COLORS.red, fontSize: 10, fontWeight: '700' }}>{student.regStatus}</Text>
+                      </View>
+                      <TouchableOpacity style={s.deleteDoc} onPress={() => {
                         setSelectedStudent(student);
                         setDeleteModalVisible(true);
-                      }} style={s.deleteDoc}>
-                        <Text style={s.deleteDocText}>Delete</Text>
-                      </TouchableOpacity> 
+                      }}>
+                        <Text style={s.deleteDocText}>🗑 Delete</Text>
+                      </TouchableOpacity>
                     </View>
                 </View>
               ))}
@@ -174,7 +179,7 @@ const s = StyleSheet.create({
   deptCard:         { backgroundColor: COLORS.bg2, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: COLORS.gold },
   deptName:         { color: COLORS.gold, fontSize: 15, fontWeight: '800', marginBottom: 10, letterSpacing: 1 },
   deptStats:        { flexDirection: 'row', gap: 16, marginBottom: 10 },
-  deleteDoc:         { backgroundColor: COLORS.redBg, borderWidth: 1, borderColor: COLORS.red, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10 },
+  deleteDoc:         { backgroundColor: COLORS.redBg, borderWidth: 1, borderColor: COLORS.red, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10, minWidth: 84, alignItems: 'center' },
   deleteDocText:     { color: COLORS.red, fontSize: 10, fontWeight: '800' },
   stat:             { alignItems: 'center' },
   statVal:          { color: COLORS.text, fontSize: 20, fontWeight: '800' },
@@ -190,12 +195,12 @@ const s = StyleSheet.create({
   userMeta:         { color: COLORS.text2, fontSize: 11, marginTop: 2 },
   userEmail:        { color: COLORS.text3, fontSize: 11, marginTop: 2 },
   userDate:         { color: COLORS.text3, fontSize: 10, marginTop: 2 },
-  userActions:      { gap: 6 },
+  userActions:      { gap: 6, alignItems: 'flex-end' },
   approveBtn:       { backgroundColor: COLORS.greenBg, borderWidth: 1, borderColor: COLORS.green, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10 },
   approveBtnText:   { color: COLORS.green, fontSize: 10, fontWeight: '800' },
   rejectBtn:        { backgroundColor: COLORS.redBg, borderWidth: 1, borderColor: COLORS.red, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10 },
   rejectBtnText:    { color: COLORS.red, fontSize: 10, fontWeight: '800' },
-  regStatusBadge:   { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
+  regStatusBadge:   { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, minWidth: 84, alignItems: 'center' },
   reqCard:          { backgroundColor: COLORS.bg2, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, padding: 12, marginBottom: 8 },
   reqHeader:        { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
   reqName:          { color: COLORS.text, fontSize: 13, fontWeight: '600' },

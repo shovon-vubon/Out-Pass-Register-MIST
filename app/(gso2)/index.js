@@ -5,8 +5,10 @@ import { db } from '../../firebase';
 import { useAuth } from '../../src/context/AuthContext';
 import { notify } from '../../src/utils/notify';
 import StatusBadge from '../../src/components/StatusBadge';
+import PriorityBadge from '../../src/components/PriorityBadge';
 import MetricCard from '../../src/components/MetricCard';
 import { COLORS } from '../../src/constants/theme';
+import { getPriority, PRIORITY_RANK } from '../../src/utils/priority';
 import { format } from 'date-fns';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -36,14 +38,19 @@ export default function GSO2Dashboard() {
         snap.docChanges().forEach(change => {
           if (change.type === 'added') {
             const d = change.doc.data();
-            notify('New Out-Pass Request', `${d.studentName} (${d.serviceNumber || d.dept}) submitted a request.`);
+            const priority = d.priority || getPriority(d.cause);
+            const prefix = priority === 'high' ? '🔴 High Priority — ' : priority === 'medium' ? '🟡 Medium Priority — ' : '';
+            notify(`${prefix}New Out-Pass Request`, `${d.studentName} (${d.serviceNumber || d.dept}) submitted a request.`);
           }
         });
       }
       reqsInitial.current = false;
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAll(docs);
-      setPending(docs.filter(r => r.status === 'pending'));
+      setPending(
+        docs.filter(r => r.status === 'pending')
+            .sort((a, b) => PRIORITY_RANK[a.priority || getPriority(a.cause)] - PRIORITY_RANK[b.priority || getPriority(b.cause)])
+      );
       setLoading(false); setRefresh(false);
     }, (err) => {
       console.warn('Firestore error:', err.message);
@@ -130,11 +137,12 @@ export default function GSO2Dashboard() {
       {pending.map((r) => (
         <View key={r.id} style={{ backgroundColor: COLORS.bg2, borderRadius: 12, borderWidth: 1, borderColor: COLORS.amberBg, padding: 16, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: COLORS.amber }}>
           <View style={{marginBottom: 8}}>
-            <View style={s.nameBadge}>
+            <View style={[s.nameBadge, { justifyContent: 'space-between' }]}>
               <View>
                 <Text style={s.name}>{r.studentName}</Text>
                 <Text style={s.svc}>{r.serviceNumber} · {r.rank}</Text>
               </View>
+              <PriorityBadge priority={r.priority || getPriority(r.cause)} />
             </View>
           </View>
           <View style={s.infoGrid}>

@@ -6,10 +6,28 @@ import { db } from '../../firebase';
 import { useAuth } from '../../src/context/AuthContext';
 import StatusBadge from '../../src/components/StatusBadge';
 import MetricCard from '../../src/components/MetricCard';
+import WeeklyRequestsChart from '../../src/components/WeeklyRequestsChart';
 import { COLORS } from '../../src/constants/theme';
 import { DEPARTMENTS } from '../../src/constants/config';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function last7DaysData(requests) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    days.push({
+      label:   DAY_LABELS[d.getDay()],
+      dayNum:  d.getDate(),
+      count:   requests.filter(r => r.date === dateStr).length,
+      isToday: i === 0,
+    });
+  }
+  return days;
+}
 
 export default function DeptHeadDashboard() {
   const { profile } = useAuth();
@@ -72,6 +90,8 @@ export default function DeptHeadDashboard() {
       <TouchableOpacity style={s.recordsBtn} onPress={() => router.push('/(depthead)/records')}>
         <Text style={s.recordsBtnText}>≡  VIEW FULL RECORDS</Text>
       </TouchableOpacity>
+
+      <WeeklyRequestsChart data={last7DaysData(requests)} />
 
       {/* Per-dept breakdown (only if watching all depts) */}
       {isAll && (

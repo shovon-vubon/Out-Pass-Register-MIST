@@ -7,3 +7,9 @@ project(':capacitor-local-notifications').projectDir = new File('../node_modules
 
 include ':capacitor-push-notifications'
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/@capacitor/push-notifications/android')
+
+include ':capawesome-capacitor-pdf-generator'
+project(':capawesome-capacitor-pdf-generator').projectDir = new File('../node_modules/@capawesome/capacitor-pdf-generator/android')
+
+include ':capgo-capacitor-printer'
+project(':capgo-capacitor-printer').projectDir = new File('../node_modules/@capgo/capacitor-printer/android')

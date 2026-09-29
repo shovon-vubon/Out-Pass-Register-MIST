@@ -24,8 +24,13 @@ export default function AdminDashboard() {
   const [busy,          setBusy]          = useState(false);
 
   useEffect(() => {
-    const unsub1 = onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsub1 = onSnapshot(collection(db, 'users'), (snap) => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort client-side (not via Firestore orderBy) so accounts created
+      // outside the app's own registration flow — which may be missing
+      // createdAt — still show up instead of being silently excluded.
+      docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+      setUsers(docs);
       setLoading(false); setRefresh(false);
     }, (err) => {
       console.warn('Firestore error:', err.message);
@@ -56,7 +61,7 @@ export default function AdminDashboard() {
     setBusy(false);
   }
 
-  const TABS = ['overview', 'pending', 'students', 'gso2', 'depthead', 'requests'];
+  const TABS = ['overview', 'pending', 'students', 'gso2', 'dept head', 'requests'];
 
   return (
     <ScrollView

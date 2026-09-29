@@ -44,7 +44,8 @@
           "color": "#B8922A",
           "sounds": []
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": false
